@@ -18,16 +18,30 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-var (
-	filePath    = "./config/"
-	fileName    = "api.json"
-	file        = filePath + fileName
-	tokenUrl    = "https://aip.baidubce.com/oauth/2.0/token"
-	requestUrl  = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic"
-	apiKey      = "API_key"
-	secretKey   = "secret_key"
-	accessToken = "access_token"
-)
+type baiduAPI struct {
+	filePath    string
+	fileName    string
+	file        string
+	tokenUrl    string
+	requestUrl  string
+	apiKey      string
+	secretKey   string
+	accessToken string
+}
+
+func NewBaiduAPI() *baiduAPI {
+	b := &baiduAPI{
+		filePath:    "./config/",
+		fileName:    "api.json",
+		tokenUrl:    "https://aip.baidubce.com/oauth/2.0/token",
+		requestUrl:  "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic",
+		apiKey:      "API_key",
+		secretKey:   "secret_key",
+		accessToken: "access_token",
+	}
+	b.file = b.filePath + b.fileName
+	return b
+}
 
 type API struct {
 	API_key    string `json:"API_key"`
@@ -48,34 +62,34 @@ func createAPIJson(src string) {
 }
 
 /*获取API的相关token*/
-func getAPI() map[string]interface{} {
-	api := util.ReadFromJsonFile(file)
+func (b *baiduAPI) getAPI() map[string]interface{} {
+	api := util.ReadFromJsonFile(b.file)
 	if api == nil {
-		os.MkdirAll(filePath, 0777)
-		createAPIJson(file)
-		api = util.ReadFromJsonFile(file)
+		os.MkdirAll(b.filePath, 0777)
+		createAPIJson(b.file)
+		api = util.ReadFromJsonFile(b.file)
 	}
 	return api
 }
 
 /*获取AccessToken*/
-func getAccessToken() string {
-	data, _ := ioutil.ReadFile(file)
+func (b *baiduAPI) getAccessToken() string {
+	data, _ := ioutil.ReadFile(b.file)
 	if data == nil {
-		createAPIJson(file)
+		createAPIJson(b.file)
 	}
-	api := getAPI()
-	resp, _ := http.Get(tokenUrl + "?grant_type=client_credentials&client_id=" + api[apiKey].(string) + "&client_secret=" + api[secretKey].(string))
+	api := b.getAPI()
+	resp, _ := http.Get(b.tokenUrl + "?grant_type=client_credentials&client_id=" + api[b.apiKey].(string) + "&client_secret=" + api[b.secretKey].(string))
 	res, _ := ioutil.ReadAll(resp.Body)
 	mp := util.Json2Map(res)
-	return mp[accessToken].(string)
+	return mp[b.accessToken].(string)
 }
 
 /*识别函数，输入img输出识别完的文字*/
-func Recognize(img []byte) string {
+func (b *baiduAPI) Recognize(img []byte) string {
 	client := &http.Client{}
 	res := []byte{}
-	postUrl := requestUrl + "?access_token=" + getAccessToken()
+	postUrl := b.requestUrl + "?access_token=" + b.getAccessToken()
 	data := url.Values{
 		"image": []string{string(img)},
 	}
