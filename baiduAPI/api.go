@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	filePath    = "./data/"
+	filePath    = "./config/"
 	fileName    = "api.json"
 	file        = filePath + fileName
 	tokenUrl    = "https://aip.baidubce.com/oauth/2.0/token"

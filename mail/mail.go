@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	filePath = "./data/"
+	filePath = "./config/"
 	fileName = "mail.json"
 )
 
