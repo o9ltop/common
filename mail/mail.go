@@ -9,10 +9,9 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"gopkg.in/gomail.v2"
 	"io/ioutil"
 	"log"
-	"net"
-	"net/smtp"
 
 	"github.com/o9ltop/common/util"
 )
@@ -26,7 +25,7 @@ type Header struct {
 
 type Email struct {
 	Host     string `json:"Host"`     //smtp服务器
-	Port     string `json:"Port"`     //smtp服务器端口
+	Port     int    `json:"Port"`     //smtp服务器端口
 	Email    string `json:"Email"`    // 这里是你的邮箱地址
 	Password string `json:"Password"` // 这里填你的授权码
 	ToEmail  string `json:"ToEmail"`  // 目标地址
@@ -34,68 +33,10 @@ type Email struct {
 	Body     string `json:"Body"` //邮件内容
 }
 
-//return a smtp client
-func Dial(addr string) (*smtp.Client, error) {
-	conn, err := tls.Dial("tcp", addr, nil)
-	if err != nil {
-		log.Panicln("Dialing Error:", err)
-		return nil, err
-	}
-	//分解主机端口字符串
-	host, _, _ := net.SplitHostPort(addr)
-	return smtp.NewClient(conn, host)
-}
-
-//参考net/smtp的func SendMail()
-//使用net.Dial连接tls(ssl)端口时,smtp.NewClient()会卡住且不提示err
-//len(to)>1时,to[1]开始提示是密送
-func SendMailUsingTLS(addr string, auth smtp.Auth, from string, to string, msg []byte) (err error) {
-	//create smtp client
-	c, err := Dial(addr)
-	if err != nil {
-		log.Println("Create smpt client error:", err)
-		return err
-	}
-	defer c.Close()
-
-	if auth != nil {
-		if ok, _ := c.Extension("AUTH"); ok {
-			if err = c.Auth(auth); err != nil {
-				log.Println("Error during AUTH", err)
-				return err
-			}
-		}
-	}
-
-	if err = c.Mail(from); err != nil {
-		return err
-	}
-
-	if err = c.Rcpt(to); err != nil {
-		return err
-	}
-
-	w, err := c.Data()
-	if err != nil {
-		return err
-	}
-
-	_, err = w.Write(msg)
-	if err != nil {
-		return err
-	}
-
-	err = w.Close()
-	if err != nil {
-		return err
-	}
-	return c.Quit()
-}
-
 func createEmailJson(src string) {
 	res := &Email{
 		Host:     "smtp.qq.com",  //smtp服务器
-		Port:     "465",          //端口
+		Port:     465,            //端口
 		Email:    "xxxx@xxx.xxx", //发送方的邮箱
 		Password: "xxx",          //发送方的密钥
 		ToEmail:  "xxxx@xxx.xxx", //接收方邮箱
@@ -133,73 +74,36 @@ func createEmailJson(src string) {
 }
 
 func Mail() {
-	data, _ := ioutil.ReadFile("mail.json")
-	if data == nil {
-		createEmailJson("mail.json")
-	}
-	email := util.ReadFromJsonFile("mail.json")
-	header := email["Header"].(map[string]interface{})
-	message := ""
-	for k, v := range header {
-		message += fmt.Sprintf("%s:%s\r\n", k, v)
-	}
-	message += "\r\n" + email["Body"].(string)
-
-	auth := smtp.PlainAuth(
-		"",
-		email["Email"].(string),
-		email["Password"].(string),
-		email["Host"].(string),
-	)
-
-	err := SendMailUsingTLS(
-		email["Host"].(string)+":"+email["Port"].(string),
-		auth,
-		email["Email"].(string),
-		email["ToEmail"].(string),
-		[]byte(message),
-	)
-
-	if err != nil {
-		panic(err)
-	}
+	MailTo("", "")
 }
 
 func MailTo(to, msg string) {
+	info := &Email{}
 	data, _ := ioutil.ReadFile("mail.json")
-	if data == nil {
-		createEmailJson("mail.json")
-	}
-	email := util.ReadFromJsonFile("mail.json")
-	header := email["Header"].(map[string]interface{})
-	message := ""
-	for k, v := range header {
-		message += fmt.Sprintf("%s:%s\r\n", k, v)
-	}
+	json.Unmarshal(data, info)
 	if to != "" {
-		email["ToEmail"] = to
+		info.ToEmail = to
 	}
 	if msg != "" {
-		email["Body"] = msg
+		info.Body = msg
 	}
-	message += "\r\n" + email["Body"].(string)
+	message := gomail.NewMessage()
+	message.SetHeader("From", info.Email)
+	message.SetHeader("To", info.ToEmail)
+	//设置主体
+	message.SetHeader("Subject", info.Header.Subject)
+	message.SetHeader("ContentType", info.Header.ContentType)
+	//设置正文
+	message.SetBody("text/html", info.Body)
 
-	auth := smtp.PlainAuth(
-		"",
-		email["Email"].(string),
-		email["Password"].(string),
-		email["Host"].(string),
-	)
+	dialer := gomail.NewDialer(info.Host, info.Port, info.Header.From, info.Password)
 
-	err := SendMailUsingTLS(
-		email["Host"].(string)+":"+email["Port"].(string),
-		auth,
-		email["Email"].(string),
-		email["ToEmail"].(string),
-		[]byte(message),
-	)
+	dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
+	err := dialer.DialAndSend(message)
 	if err != nil {
-		panic(err)
+		log.Printf("邮件发送失败 %v", err)
+		return
 	}
+	log.Println("邮件发送成功")
 }
