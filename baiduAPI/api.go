@@ -12,13 +12,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/o9ltop/common/util"
 	"github.com/tidwall/gjson"
 )
 
 var (
-	file        = "api.json"
+	filePath    = "./data/"
+	fileName    = "api.json"
+	file        = filePath + fileName
 	tokenUrl    = "https://aip.baidubce.com/oauth/2.0/token"
 	requestUrl  = "https://aip.baidubce.com/rest/2.0/ocr/v1/accurate_basic"
 	apiKey      = "API_key"
@@ -48,6 +51,7 @@ func createAPIJson(src string) {
 func getAPI() map[string]interface{} {
 	api := util.ReadFromJsonFile(file)
 	if api == nil {
+		os.MkdirAll(filePath, 0777)
 		createAPIJson(file)
 		api = util.ReadFromJsonFile(file)
 	}

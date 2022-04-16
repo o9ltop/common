@@ -9,11 +9,16 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/o9ltop/common/util"
 	"gopkg.in/gomail.v2"
 	"io/ioutil"
 	"log"
+	"os"
+)
 
-	"github.com/o9ltop/common/util"
+var (
+	filePath = "./data/"
+	fileName = "mail.json"
 )
 
 type Header struct {
@@ -68,6 +73,7 @@ func createEmailJson(src string) {
 	fmt.Scanln(&res.Header.ContentType)
 	data, err := json.MarshalIndent(res, "", "	") // 第二个表示每行的前缀，这里不用，第三个是缩进符号，这里用tab
 	util.CheckError(err)
+	os.MkdirAll(filePath, 0777)
 	err = ioutil.WriteFile(src, data, 0777)
 	util.CheckError(err)
 }
@@ -78,9 +84,9 @@ func Mail() {
 
 func MailTo(to, title, msg string) {
 	info := &Email{}
-	data, _ := ioutil.ReadFile("mail.json")
+	data, _ := ioutil.ReadFile(filePath + fileName)
 	if data == nil {
-		createEmailJson("mail.json")
+		createEmailJson(filePath + fileName)
 	}
 	json.Unmarshal(data, info)
 	if to != "" {
