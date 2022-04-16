@@ -43,6 +43,16 @@ func NewBaiduAPI() *baiduAPI {
 	return b
 }
 
+func (e *baiduAPI) SetFile(filePath, fileName string) {
+	if filePath != "" {
+		e.filePath = filePath
+	}
+	if fileName != "" {
+		e.fileName = fileName
+	}
+	e.file = e.filePath + e.fileName
+}
+
 type API struct {
 	API_key    string `json:"API_key"`
 	Secret_key string `json:"secret_key"`

@@ -45,6 +45,16 @@ func NewMail() *Email {
 	return e
 }
 
+func (e *Email) SetFile(filePath, fileName string) {
+	if filePath != "" {
+		e.filePath = filePath
+	}
+	if fileName != "" {
+		e.fileName = fileName
+	}
+	e.file = e.filePath + e.fileName
+}
+
 func (e *Email) createEmailJson() {
 	res := &Email{
 		Host:       "smtp.qq.com",  //smtp服务器
