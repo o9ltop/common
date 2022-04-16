@@ -16,11 +16,6 @@ import (
 	"os"
 )
 
-var (
-	filePath = "./config/"
-	fileName = "mail.json"
-)
-
 type Header struct {
 	Subject     string `json:"Subject"`      //标题
 	ContentType string `json:"Content-Type"` //内容格式
@@ -36,9 +31,21 @@ type Email struct {
 	ToNickName string `json:"ToNickName"` //接收方昵称
 	Header     Header `json:"Header"`
 	Body       string `json:"Body"` //邮件内容
+	filePath   string
+	fileName   string
+	file       string
 }
 
-func createEmailJson(src string) {
+func NewMail() *Email {
+	e := &Email{
+		filePath: "./config/",
+		fileName: "mail.json",
+	}
+	e.file = e.filePath + e.fileName
+	return e
+}
+
+func (e *Email) createEmailJson() {
 	res := &Email{
 		Host:       "smtp.qq.com",  //smtp服务器
 		Port:       465,            //端口
@@ -73,41 +80,40 @@ func createEmailJson(src string) {
 	fmt.Scanln(&res.Header.ContentType)
 	data, err := json.MarshalIndent(res, "", "	") // 第二个表示每行的前缀，这里不用，第三个是缩进符号，这里用tab
 	util.CheckError(err)
-	os.MkdirAll(filePath, 0777)
-	err = ioutil.WriteFile(src, data, 0777)
+	os.MkdirAll(e.filePath, 0777)
+	err = ioutil.WriteFile(e.file, data, 0777)
 	util.CheckError(err)
 }
 
-func Mail() {
-	MailTo("", "", "")
+func (e *Email) Mail() {
+	e.MailTo("", "", "")
 }
 
-func MailTo(to, title, msg string) {
-	info := &Email{}
-	data, _ := ioutil.ReadFile(filePath + fileName)
+func (e *Email) MailTo(to, title, msg string) {
+	data, _ := ioutil.ReadFile(e.file)
 	if data == nil {
-		createEmailJson(filePath + fileName)
+		e.createEmailJson()
 	}
-	json.Unmarshal(data, info)
+	json.Unmarshal(data, e)
 	if to != "" {
-		info.ToEmail = to
+		e.ToEmail = to
 	}
 	if title != "" {
-		info.Header.Subject = title
+		e.Header.Subject = title
 	}
 	if msg != "" {
-		info.Body = msg
+		e.Body = msg
 	}
 	message := gomail.NewMessage()
-	message.SetAddressHeader("From", info.Email, info.ToEmail)
-	message.SetAddressHeader("To", info.ToEmail, "")
+	message.SetAddressHeader("From", e.Email, e.ToEmail)
+	message.SetAddressHeader("To", e.ToEmail, "")
 	//设置主体
-	message.SetHeader("Subject", info.Header.Subject)
-	message.SetHeader("ContentType", info.Header.ContentType)
+	message.SetHeader("Subject", e.Header.Subject)
+	message.SetHeader("ContentType", e.Header.ContentType)
 	//设置正文
-	message.SetBody("text/html", info.Body)
+	message.SetBody("text/html", e.Body)
 
-	dialer := gomail.NewDialer(info.Host, info.Port, info.Email, info.Password)
+	dialer := gomail.NewDialer(e.Host, e.Port, e.Email, e.Password)
 
 	dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 
