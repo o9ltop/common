@@ -73,10 +73,10 @@ func createEmailJson(src string) {
 }
 
 func Mail() {
-	MailTo("", "")
+	MailTo("", "", "")
 }
 
-func MailTo(to, msg string) {
+func MailTo(to, title, msg string) {
 	info := &Email{}
 	data, _ := ioutil.ReadFile("mail.json")
 	if data == nil {
@@ -85,6 +85,9 @@ func MailTo(to, msg string) {
 	json.Unmarshal(data, info)
 	if to != "" {
 		info.ToEmail = to
+	}
+	if title != "" {
+		info.Header.Subject = title
 	}
 	if msg != "" {
 		info.Body = msg
